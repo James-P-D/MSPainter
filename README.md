@@ -1,7 +1,7 @@
 # MSPainter
 Picture generator using MS Paint in Python
 
-![Screenshot](https://github.com/James-P-D/MSPainter/blob/master/screenshot.gif)
+![Screenshot](https://github.com/James-P-D/MSPainter/blob/main/screenshot.gif)
 
 (Note image has been sped-up. Actual process above generating a version of [David Hockney's 1966 painting The Splash](https://en.wikipedia.org/wiki/The_Splash) took 15 minutes)
 
