@@ -20,8 +20,8 @@ import os.path
 # GLOBALS
 ###############################################
 
-prompts = ["Click the top-left color icon in Paint",
-           "Click the bottom-right color icon in Paint",
+prompts = ["Click the top-left color icon (black) in Paint",
+           "Click the bottom-right color icon (light purple) in Paint",
            "Click the top-left of the canvas in Paint"]
 step = 0
 top_left_color_x, top_left_color_y = (0, 0)
