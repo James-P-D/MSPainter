@@ -1,12 +1,13 @@
 import numpy as np
 from PIL import Image # pip install pillow
 import win32api # pip install pywin32
+import win32.lib.win32con as win32con
 import time
 from pynput.mouse import Listener
 import win32gui
 from threading import Timer
 import os
-
+import math
 prompts = ["Click the top-left color icon in Paint",
            "Click the bottom-right color icon in Paint",
            "Click the top-left of the canvas in Paint",
@@ -57,16 +58,39 @@ class perpetualTimer():
    def stop(self):
       self.thread.cancel()
 
-def main():
+def get_rgb(pixel):
+    return ((pixel >> 16) & 255, (pixel >> 8) & 255, pixel & 255)
 
-    img = Image.open(r'C:\Users\jdorr\Desktop\monochrome.jpg')
+def get_closest_color(rgb_array, palette):
+    (r1, g1, b1) = (rgb_array[0], rgb_array[1], rgb_array[2])
+
+    closest_color = 999999 # TODO: set to some kind of int.MAX?
+    closest_color_index = 0
+
+    for i in range(0, len(palette)):
+        (_, _, (r2, g2, b2)) = palette[i]
+        d = math.sqrt(((r2-r1)*0.3)**2 + ((g2-g1)*0.59)**2 + ((b2-b1)*0.11)**2)
+        if (d < closest_color):
+            closest_color = d
+            closest_color_index = i
+
+    return closest_color_index
+
+def generate_image_array(palette, img_path):
+    img = Image.open(img_path)
    
-    arr = np.array(img) # 640x480x4 array
-    #arr2 = np.array(img.width, img.height, np.int32)
+    original_array = np.array(img) # 640x480x4 array
+    new_array = np.ndarray((img.width, img.height), np.int32)
 
-    for x in range(0, img.width):
-        for y in range(0, img.height):
-            print(arr[x,y])
+    for x in range(0, img.width-1):
+        print(f"{x} of {img.width-1}")
+        for y in range(0, img.height-1):
+            new_array[x, y] = get_closest_color(original_array[y,x], palette)
+
+    return new_array
+
+def main():
+    global top_left_canvas_x, top_left_canvas_y
 
     print(prompts[step])
 
@@ -79,7 +103,6 @@ def main():
                 t.stop()
                 listener.stop()                
 
-        #Timer(10, time_out).start()
         t = perpetualTimer(1, time_out)
         t.start()
         listener.join()
@@ -95,15 +118,35 @@ def main():
 
         win32api.SetCursorPos((x, y))
         pixel = win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), x , y)
-        palette.append((x, y, (pixel >> 16) & 255, (pixel >> 8) & 255, pixel & 255))
+        palette.append((x, y, get_rgb(pixel)))
         
         y += vertical_color_interval
 
         win32api.SetCursorPos((x, y))
         pixel = win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), x , y)
-        palette.append((x, y, (pixel >> 16) & 255, (pixel >> 8) & 255, pixel & 255))
+        palette.append((x, y, get_rgb(pixel)))
 
         x_float += horizontal_color_interval
+
+    image_ids = generate_image_array(palette, r'C:\Users\jdorr\Desktop\monochrome.jpg')
+
+    print(image_ids.shape)
+    (width, height) = image_ids.shape
+    for i in range(0, len(palette)):
+        (color_x, color_y, (_, _, _)) = palette[i]
+        win32api.SetCursorPos((color_x, color_y))
+        time.sleep(0.25)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, color_x, color_y, 0, 0)
+        time.sleep(0.25)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, color_x, color_y, 0, 0)
+        time.sleep(0.25)
+        for x in range(0, width):
+            for y in range(0, height):
+                if (image_ids[(x, y)] == i):
+                    win32api.SetCursorPos((top_left_canvas_x + x, top_left_canvas_y + y))
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, top_left_canvas_x + x, top_left_canvas_y + y, 0, 0)
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, top_left_canvas_x + x, top_left_canvas_y + y, 0, 0)
+                    time.sleep(0.1)
 
 
     os._exit(0)
