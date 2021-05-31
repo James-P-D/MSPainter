@@ -15,4 +15,6 @@ python MSPainter.py c:\splash_small.jpg
 
 The console will prompt you to first click on the top-left color icon (black) in MS Paint, then the bottom-right colour icon (light purple), and then finally click on the top-left corner of the empty canvas.
 
+![ClickPoints](https://github.com/James-P-D/MSPainter/blob/main/ClickPoints.png)
+
 The program will then automatically move the mouse across the MS Paint palette and read the twenty possible colours. It will then slowly analyse the inputted image file and generate a 2D array mapping the colours of the original image to the closest possible colours available in the MS Paint palette. Once this process is complete, it will begin to paint the picture.
