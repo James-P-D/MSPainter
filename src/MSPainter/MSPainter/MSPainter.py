@@ -1,4 +1,7 @@
-#C:\Users\jdorr\Desktop\splash_small.jpg
+###############################################
+# Imports
+###############################################
+
 import sys
 import numpy as np
 from PIL import Image
@@ -11,6 +14,11 @@ from threading import Timer
 import os
 import math
 from pynput import mouse
+import os.path
+
+###############################################
+# GLOBALS
+###############################################
 
 prompts = ["Click the top-left color icon in Paint",
            "Click the bottom-right color icon in Paint",
@@ -19,6 +27,32 @@ step = 0
 top_left_color_x, top_left_color_y = (0, 0)
 bottom_right_color_x, bottom_right_color_y = (0, 0)
 top_left_canvas_x, top_left_canvas_y = (0, 0)
+
+###############################################
+# class perpetualTimer()
+###############################################
+
+class perpetualTimer():
+
+   def __init__(self, t, hFunction):
+      self.t = t
+      self.hFunction = hFunction
+      self.thread = Timer(self.t, self.handle_function)
+
+   def handle_function(self):
+      self.hFunction()
+      self.thread = Timer(self.t, self.handle_function)
+      self.thread.start()
+
+   def start(self):
+      self.thread.start()
+
+   def stop(self):
+      self.thread.cancel()
+
+###############################################
+# on_click()
+###############################################
 
 def on_click(x, y, button, pressed):
     global step, top_left_color_x, top_left_color_y, bottom_right_color_x, bottom_right_color_y, top_left_canvas_x, top_left_canvas_y
@@ -39,37 +73,25 @@ def on_click(x, y, button, pressed):
         elif(button == mouse.Button.right):
             os._exit(2)
 
-class perpetualTimer():
-
-   def __init__(self,t,hFunction):
-      self.t=t
-      self.hFunction = hFunction
-      self.thread = Timer(self.t,self.handle_function)
-
-   def handle_function(self):
-      self.hFunction()
-      self.thread = Timer(self.t,self.handle_function)
-      self.thread.start()
-
-   def start(self):
-      self.thread.start()
-
-   def stop(self):
-      self.thread.cancel()
+###############################################
+# get_rgb()
+###############################################
 
 def get_rgb(pixel):
     return (pixel & 255, (pixel >> 8) & 255, (pixel >> 16) & 255)
 
+###############################################
+# get_closest_color()
+###############################################
+
 def get_closest_color(rgb_array, palette):
     (r1, g1, b1) = (rgb_array[0], rgb_array[1], rgb_array[2])
 
-    closest_color = 999999 # TODO: set to some kind of int.MAX?
+    closest_color = pow(255, 2) + pow(255, 2) + pow(255, 2)
     closest_color_index = 0
 
     for i in range(0, len(palette)):
         (_, _, (r2, g2, b2)) = palette[i]
-        #d = math.sqrt(((r2-r1)*0.3)**2 + ((g2-g1)*0.59)**2 + ((b2-b1)*0.11)**2)
-        #d = pow(((r2-r1)*0.30), 2) + pow(((g2-g1)*0.59), 2) + pow(((b2-b1)*0.11), 2)
         d = pow(((r2-r1)), 2) + pow(((g2-g1)), 2) + pow(((b2-b1)), 2)
         if (d < closest_color):
             closest_color = d
@@ -77,18 +99,31 @@ def get_closest_color(rgb_array, palette):
 
     return closest_color_index
 
+###############################################
+# generate_image_array()
+###############################################
+
 def generate_image_array(palette, img_path):
+    print("Generating image array, please wait..")
     img = Image.open(img_path)
    
-    original_array = np.array(img) # 640x480x4 array
+    original_array = np.array(img)
     new_array = np.ndarray((img.width, img.height), np.int32)
 
-    for x in range(0, img.width-1):
-        print(f"{x} of {img.width-1}")
+    last_pc = 0
+    for x in range(0, img.width - 1):
+        current_pc = int((x / img.width) * 100)
+        if (current_pc != last_pc):
+            print(f"{current_pc}%")
+            last_pc = current_pc
         for y in range(0, img.height-1):
             new_array[x, y] = get_closest_color(original_array[y,x], palette)
 
     return new_array
+
+###############################################
+# main()
+###############################################
 
 def main(image_path):
     global top_left_canvas_x, top_left_canvas_y
@@ -133,7 +168,6 @@ def main(image_path):
 
     image_ids = generate_image_array(palette, image_path)
 
-    print(image_ids.shape)
     (width, height) = image_ids.shape
     for i in range(0, len(palette)):
         # Skip colour 1, since it's white and the canvas should already be this colour
@@ -164,5 +198,10 @@ def main(image_path):
 if __name__ == "__main__":
     if (len(sys.argv) != 2):
         print("Usage: Python MSPainter.py IMAGE_FILE")
-        os._exit(0)
+        os._exit(1)
+
+    if (not os.path.isfile(sys.argv[1])):
+        print("Cannot find file {argv[1]}")
+        os._exit(1)
+
     main(sys.argv[1])
