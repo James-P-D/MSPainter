@@ -1,6 +1,8 @@
+#C:\Users\jdorr\Desktop\splash_small.jpg
+import sys
 import numpy as np
-from PIL import Image # pip install pillow
-import win32api # pip install pywin32
+from PIL import Image
+import win32api
 import win32.lib.win32con as win32con
 import time
 from pynput.mouse import Listener
@@ -8,37 +10,34 @@ import win32gui
 from threading import Timer
 import os
 import math
+from pynput import mouse
+
 prompts = ["Click the top-left color icon in Paint",
            "Click the bottom-right color icon in Paint",
-           "Click the top-left of the canvas in Paint",
-           "Click the bottom-right of the canvas in Paint"]
+           "Click the top-left of the canvas in Paint"]
 step = 0
 top_left_color_x, top_left_color_y = (0, 0)
 bottom_right_color_x, bottom_right_color_y = (0, 0)
 top_left_canvas_x, top_left_canvas_y = (0, 0)
-bottom_right_canvas_x, bottom_right_canvas_y = (0, 0)
-
 
 def on_click(x, y, button, pressed):
-    global step, top_left_color_x, top_left_color_y, bottom_right_color_x, bottom_right_color_y, top_left_canvas_x, top_left_canvas_y, bottom_left_canvas_x, bottom_right_canvas_y
+    global step, top_left_color_x, top_left_color_y, bottom_right_color_x, bottom_right_color_y, top_left_canvas_x, top_left_canvas_y
 
     if(pressed):
-        #print(x, y, button, pressed)
-        if (step == 0):
-            (top_left_color_x, top_left_color_y) = (x, y)
-            step += 1
-            print(prompts[step])
-        elif (step == 1):
-            (bottom_right_color_x, bottom_right_color_y) = (x, y)
-            step += 1
-            print(prompts[step])
-        elif (step == 2):
-            (top_left_canvas_x, top_left_canvas_y) = (x, y)
-            step += 1
-            print(prompts[step])
-        elif(step == 3):
-            (bottom_right_canvas_x, bottom_right_canvas_y) = (x, y)
-            step += 1
+        if(button == mouse.Button.left):
+            if (step == 0):
+                (top_left_color_x, top_left_color_y) = (x, y)
+                step += 1
+                print(prompts[step])
+            elif (step == 1):
+                (bottom_right_color_x, bottom_right_color_y) = (x, y)
+                step += 1
+                print(prompts[step])
+            elif (step == 2):
+                (top_left_canvas_x, top_left_canvas_y) = (x, y)
+                step += 1
+        elif(button == mouse.Button.right):
+            os._exit(2)
 
 class perpetualTimer():
 
@@ -59,7 +58,7 @@ class perpetualTimer():
       self.thread.cancel()
 
 def get_rgb(pixel):
-    return ((pixel >> 16) & 255, (pixel >> 8) & 255, pixel & 255)
+    return (pixel & 255, (pixel >> 8) & 255, (pixel >> 16) & 255)
 
 def get_closest_color(rgb_array, palette):
     (r1, g1, b1) = (rgb_array[0], rgb_array[1], rgb_array[2])
@@ -69,7 +68,9 @@ def get_closest_color(rgb_array, palette):
 
     for i in range(0, len(palette)):
         (_, _, (r2, g2, b2)) = palette[i]
-        d = math.sqrt(((r2-r1)*0.3)**2 + ((g2-g1)*0.59)**2 + ((b2-b1)*0.11)**2)
+        #d = math.sqrt(((r2-r1)*0.3)**2 + ((g2-g1)*0.59)**2 + ((b2-b1)*0.11)**2)
+        #d = pow(((r2-r1)*0.30), 2) + pow(((g2-g1)*0.59), 2) + pow(((b2-b1)*0.11), 2)
+        d = pow(((r2-r1)), 2) + pow(((g2-g1)), 2) + pow(((b2-b1)), 2)
         if (d < closest_color):
             closest_color = d
             closest_color_index = i
@@ -89,7 +90,7 @@ def generate_image_array(palette, img_path):
 
     return new_array
 
-def main():
+def main(image_path):
     global top_left_canvas_x, top_left_canvas_y
 
     print(prompts[step])
@@ -99,7 +100,7 @@ def main():
 
         def time_out():
             global step
-            if (step > 3):
+            if (step > 2):
                 t.stop()
                 listener.stop()                
 
@@ -107,7 +108,9 @@ def main():
         t.start()
         listener.join()
 
+    # Get the horizontal offset between the 10 columns of colours
     horizontal_color_interval = ((bottom_right_color_x - top_left_color_x) / 9)
+    # Get the vertical offset between the 2 rows of colours
     vertical_color_interval = (bottom_right_color_y - top_left_color_y)
 
     palette = []
@@ -128,11 +131,15 @@ def main():
 
         x_float += horizontal_color_interval
 
-    image_ids = generate_image_array(palette, r'C:\Users\jdorr\Desktop\monochrome.jpg')
+    image_ids = generate_image_array(palette, image_path)
 
     print(image_ids.shape)
     (width, height) = image_ids.shape
     for i in range(0, len(palette)):
+        # Skip colour 1, since it's white and the canvas should already be this colour
+        if (i==1):
+            continue;
+
         (color_x, color_y, (_, _, _)) = palette[i]
         win32api.SetCursorPos((color_x, color_y))
         time.sleep(0.25)
@@ -146,8 +153,7 @@ def main():
                     win32api.SetCursorPos((top_left_canvas_x + x, top_left_canvas_y + y))
                     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, top_left_canvas_x + x, top_left_canvas_y + y, 0, 0)
                     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, top_left_canvas_x + x, top_left_canvas_y + y, 0, 0)
-                    time.sleep(0.1)
-
+                    time.sleep(0.01)
 
     os._exit(0)
 
@@ -156,4 +162,7 @@ def main():
 ###############################################
 
 if __name__ == "__main__":
-    main()
+    if (len(sys.argv) != 2):
+        print("Usage: Python MSPainter.py IMAGE_FILE")
+        os._exit(0)
+    main(sys.argv[1])

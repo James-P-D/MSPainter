@@ -11,6 +11,9 @@
     <OutputPath>.</OutputPath>
     <Name>MSPainter</Name>
     <RootNamespace>MSPainter</RootNamespace>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <CommandLineArguments>C:\Users\jdorr\Desktop\dots.png</CommandLineArguments>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
